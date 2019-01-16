@@ -10,6 +10,7 @@
 #include <frontier_exploration/Frontier.h>
 #include <frontier_exploration/UpdateBoundaryPolygon.h>
 #include <frontier_exploration/GetNextFrontier.h>
+#include <tf/transform_listener.h>
 
 namespace frontier_exploration
 {

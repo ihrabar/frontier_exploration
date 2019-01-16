@@ -11,6 +11,8 @@
 #include <frontier_exploration/UpdateBoundaryPolygon.h>
 
 #include <tf/transform_listener.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <move_base_msgs/MoveBaseAction.h>
 
@@ -34,6 +36,7 @@ public:
     FrontierExplorationServer(std::string name) :
         tf_listener_(ros::Duration(10.0)),
         private_nh_("~"),
+        tf2_listener_(tf2_buffer_),
         as_(nh_, name, boost::bind(&FrontierExplorationServer::executeCb, this, _1), false),
         move_client_("move_base",true),
         retry_(5)
@@ -41,7 +44,7 @@ public:
         private_nh_.param<double>("frequency", frequency_, 0.0);
         private_nh_.param<double>("goal_aliasing", goal_aliasing_, 0.1);
 
-        explore_costmap_ros_ = boost::shared_ptr<costmap_2d::Costmap2DROS>(new costmap_2d::Costmap2DROS("explore_costmap", tf_listener_));
+        explore_costmap_ros_ = boost::shared_ptr<costmap_2d::Costmap2DROS>(new costmap_2d::Costmap2DROS("explore_costmap", tf2_buffer_)); // ?
 
         as_.registerPreemptCallback(boost::bind(&FrontierExplorationServer::preemptCb, this));
         as_.start();
@@ -52,6 +55,8 @@ private:
     ros::NodeHandle nh_;
     ros::NodeHandle private_nh_;
     tf::TransformListener tf_listener_;
+    tf2_ros::Buffer tf2_buffer_;
+    tf2_ros::TransformListener tf2_listener_;
     actionlib::SimpleActionServer<frontier_exploration::ExploreTaskAction> as_;
 
     boost::shared_ptr<costmap_2d::Costmap2DROS> explore_costmap_ros_;
@@ -110,11 +115,11 @@ private:
             geometry_msgs::PoseStamped goal_pose;
 
             //get current robot pose in frame of exploration boundary
-            tf::Stamped<tf::Pose> robot_pose;
+            geometry_msgs::PoseStamped robot_pose;
             explore_costmap_ros_->getRobotPose(robot_pose);
 
             //provide current robot pose to the frontier search service request
-            tf::poseStampedTFToMsg(robot_pose,srv.request.start_pose);
+            srv.request.start_pose = robot_pose;
 
             //evaluate if robot is within exploration boundary using robot_pose in boundary frame
             geometry_msgs::PoseStamped eval_pose = srv.request.start_pose;
